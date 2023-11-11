@@ -1,0 +1,343 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        center {
+            background: #FFF4C1;
+            border-style: solid;
+            border-color: #EA7500;
+            margin-left: 250px;
+            margin-right: 250px;}
+        h2 {
+            width: 400px;
+            background: #FFE6D9;
+            text-align: center;
+            color: #003E3E;
+            border-style: solid;
+            border-color: #B87070;
+            border-radius: 5px;
+        }
+        #start ,#restart{
+            width: 100px;
+            background: #6FB7B7;
+            border-color:#B3D9D9;
+            border-radius:5px;
+            font-size:15px;
+            color: white;
+        }
+        td {
+            text-align: center;
+            font-size: 25px;
+            color: #7373B9;
+        }
+        a {
+            text-decoration: none;
+            color: #009393;
+        }
+
+    </style>
+</head>
+<body>
+    <center>
+        <h2>貪吃蛇</h2>
+        <table width="200px" rules="none">
+            <tr>
+                <td><button id="start" onclick="start()">START</button></td>
+                <td bgcolor="#FFF4C1">&nbsp&nbsp&nbsp</td>
+                <td><button id="restart" onclick="refresh()">RESTART</button></td>
+                <td bgcolor="#FFF4C1">&nbsp&nbsp&nbsp</td>
+                <td>time:<span id="time_id">0</span></td>
+                <td bgcolor="#FFF4C1">&nbsp&nbsp&nbsp</td>
+                <td>score:<span id="score_id">0</span></td>
+            </tr>
+        </table>
+        <p></p>
+        <b><img src="apple.jpg"><span style="color:red">:(+1)&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</span><img src="drug.jpg"><span style="color:green">:(-1)&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</span><img src="bomb.jpg"><span>:(結束)</span></b>
+        <br /><b><span style="color: #AE57A4 ">(超過四秒開始扣分)</span></b>
+        <p></p>
+        <canvas width="400" height="400" id="canvas_id"></canvas>
+        <script>
+            var size = 20;
+            var count = 20;
+            var interval;
+            var snake;
+            var apple;
+            var drug;
+            var bomb;
+            var direction = 1;
+            var t = 0;
+            var speed = 300;
+
+            function start() {
+                snake = {
+                    body: [{ x: count / 2, y: count / 2 }],//起始位置在中間
+                    size: 5,
+                    direction: { x: 0, y: -1 }//起始方向向上
+                }
+                put();//放蘋果
+                putdrug();//放毒藥
+                putbomb();//放炸彈
+                updatescore(0)//分數
+                time()//時間
+                interval = setInterval(game, speed);//每隔1秒呼叫一次game()
+
+            }
+
+            function updatescore(newscore) {//分數
+                score = newscore
+                document.getElementById('score_id').innerHTML = score
+                if (score < 0) {
+                    over();
+                }
+            }
+
+            function time() {//超過4秒沒吃到蘋果開始扣分
+                if (snake.body[0].x != apple.x && snake.body[0].y != apple.y) {
+                    t++;
+                    document.getElementById('time_id').innerHTML = t;
+                    setTimeout("time()", 2000);
+                }
+                if (t > 4) {
+                    snake.size -= 1;
+                    if (snake.size <= 5) {//長度最短為初始值
+                        snake.size = 5;
+                    }
+                    updatescore(score - 1);
+                    setTimeout("time()", 2000);
+                    clearInterval(game);
+                    speed += 50;
+                    if (speed > 300) {//速度最慢為初始值
+                        speed = 300;
+                    }
+                    interval = setInterval(game, speed);
+                }
+                if (snake.body[0].x == apple.x && snake.body[0].y == apple.y) {
+                    eat();
+                    document.getElementById('time_id').innerHTML = t;
+                }
+            }
+
+            function put() {//放蘋果
+                apple = {//隨機座標
+                    x: Math.floor(Math.random() * count),
+                    y: Math.floor(Math.random() * count),
+                }
+                for (i = 0; i < snake.body.length; i++) {//是否放在蛇身上
+                    if (snake.body[i].x === apple.x && snake.body[i].y === apple.y) {
+                        put();
+                        break;
+                    }
+                }
+            }
+
+            function putdrug() {//放毒藥
+                drug = {
+                    x: Math.floor(Math.random() * count),
+                    y: Math.floor(Math.random() * count),
+                }
+                for (i = 0; i < snake.body.length; i++) {//是否放在蛇身上
+                    if (snake.body[i].x === drug.x && snake.body[i].y === drug.y) {
+                        putdrug();
+                        break;
+                    }
+                }
+            }
+
+            function putbomb() {//放毒藥
+                bomb = {
+                    x: Math.floor(Math.random() * count),
+                    y: Math.floor(Math.random() * count),
+                }
+                for (i = 0; i < snake.body.length; i++) {//是否放在蛇身上
+                    if (snake.body[i].x === bomb.x && snake.body[i].y === bomb.y) {
+                        putbomb();
+                        break;
+                    }
+                }
+            }
+
+            function game() {//流程
+                move();
+                if (dead()) {
+                    over();
+                    return;
+                }
+                if (snake.body[0].x === apple.x && snake.body[0].y === apple.y) {
+                    eat();
+                    putdrug();
+                    putbomb();
+                }
+                if (snake.body[0].x === drug.x && snake.body[0].y === drug.y) {
+                    cut();
+                    put();
+                    putbomb();
+                }
+                if (snake.body[0].x === bomb.x && snake.body[0].y === bomb.y) {
+                    end();
+                }
+                draw();//背景
+            }
+
+            function eat() {//吃蘋果
+                snake.size += 1;
+                put();
+                updatescore(score + 1);
+                time(t = 0);//時間重置
+                clearInterval(game);
+                speed -= 10;
+                interval = setInterval(game, speed);
+            }
+            function cut() {//吃毒藥
+                putdrug();
+                updatescore(score - 1);
+            }
+            function end() {//吃毒藥
+                over();
+            }
+            function dead() {
+                //撞牆
+                if (snake.body[0].x < 0) {
+                    return true;
+                }
+                else if (snake.body[0].x >= count) {
+                    return true;
+                }
+                else if (snake.body[0].y < 0) {
+                    return true;
+                }
+                else if (snake.body[0].y >= count) {
+                    return true;
+                }
+                //撞身體
+                for (var i = 1; i < snake.body.length; i++) {//從1開始是因為頭是第0個
+                    if (snake.body[0].x === snake.body[i].x && snake.body[0].y === snake.body[i].y) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function over() {
+                clearInterval(interval);//清除
+                if (window.confirm('遊戲結束!')) {
+                    refresh();
+                }
+                // setTimeout('myrefresh()', 1000);
+                //window.alert('遊戲結束!');
+            }
+            function refresh() {//刷新頁面
+                window.location.reload();
+            }
+
+            function move() {//移動
+                var newblock = {//新的位置=蛇頭位置+蛇頭方向
+                    x: snake.body[0].x + snake.direction.x,
+                    y: snake.body[0].y + snake.direction.y,
+                }
+                snake.body.unshift(newblock);//新的格子加在body的最前面
+                while (snake.body.length > snake.size) {//刪掉過多的格子
+                    snake.body.pop();
+                }
+            }
+
+            function draw() {//更新畫面
+                var canvas = document.getElementById('canvas_id');
+                var context = canvas.getContext('2d');
+                context.fillStyle = '#D1E9E9';//填滿
+                context.fillRect(0, 0, canvas.width, canvas.height);//填滿
+
+                context.fillStyle = '#5A5AAD';//身體顏色
+                for (var i = 1; i < snake.body.length; i++) {
+                    context.fillRect(
+                        snake.body[i].x * size + 1, snake.body[i].y * size + 1, size - 1, size - 1
+                    )
+                }
+                context.fillStyle = 'white';//頭顏色
+                context.fillRect(
+                    snake.body[0].x * size + 1, snake.body[0].y * size + 1, size - 1, size - 1
+                )
+                var img = new Image();
+                var img2 = new Image();
+                var img3 = new Image();
+                img.onload = function () {
+                    context.drawImage(img, apple.x * size + 1, apple.y * size + 1, size - 1, size - 1);
+                };
+                img.src = "apple2.jpg";//畫蘋果
+
+                img2.onload = function () {
+                    context.drawImage(img2, drug.x * size + 1, drug.y * size + 1, size - 1, size - 1);
+                };
+                img2.src = "drug2.jpg";//畫毒藥
+
+                img3.onload = function () {
+                    context.drawImage(img3, bomb.x * size + 1, bomb.y * size + 1, size - 1, size - 1);
+                };
+                img3.src = "bomb2.jpg";//畫炸彈                
+            }
+
+            window.onload = onPageLoaded
+
+            function onPageLoaded() {
+                document.addEventListener('keydown', handle)//如果系統發出keydown的事件時，執行handel這個function
+            }//keydown:只要按下鍵盤，系統就會發出
+
+            function handle(event) {//keyCode:鍵盤按鍵對應的編號
+                var X = snake.direction.x//原本方向的值
+                var Y = snake.direction.y
+                if (direction == 1) {//上
+                    if (event.keyCode == 37) {//37:左鍵
+                        snake.direction.x = Y//更新方向
+                        snake.direction.y = -X
+                        direction = 3//方向向左
+                    }
+                    else if (event.keyCode == 39) {//39:右鍵
+                        snake.direction.x = -Y//更新方向
+                        snake.direction.y = X
+                        direction = 4//方向向右
+                    }
+                }
+                else if (direction == 2) {//下
+                    if (event.keyCode == 37) {//37:左
+                        snake.direction.x = -Y
+                        snake.direction.y = X
+                        direction = 3//方向向左
+                    }
+                    else if (event.keyCode == 39) {//39:右
+                        snake.direction.x = Y
+                        snake.direction.y = -X
+                        direction = 4//方向向右
+                    }
+                }
+                else if (direction == 3) {//左
+                    if (event.keyCode == 38) {//38:上
+                        snake.direction.x = -Y//更新方向
+                        snake.direction.y = X
+                        direction = 1//方向向上
+                    }
+                    else if (event.keyCode == 40) {//40:下
+                        snake.direction.x = Y//更新方向
+                        snake.direction.y = -X
+                        direction = 2//方向向下
+                    }
+                }
+                else if (direction == 4) {//右
+                    if (event.keyCode == 38) {//38:上
+                        snake.direction.x = Y
+                        snake.direction.y = -X
+                        direction = 1//方向向上
+                    }
+                    else if (event.keyCode == 40) {//40:下
+                        snake.direction.x = -Y
+                        snake.direction.y = X
+                        direction = 2//方向向下
+                    }
+                }
+            }
+        </script>
+    </center>
+    <center><footer>參考資料&nbsp:&nbsp<a href="https://www.youtube.com/watch?v=gaG9ObrhnO8">影片(上)</a>&nbsp&nbsp&nbsp<a href="https://www.youtube.com/watch?v=PJxxk1kifhE">影片(下)</a>&nbsp&nbsp&nbsp<a href="https://dotblogs.com.tw/puma/2008/04/29/3617">時間倒數</a>&nbsp&nbsp&nbsp<a href="https://blog.xuite.net/vexed/tech/56154780-HTML5+Canvas+%E5%90%8C%E6%99%82%E8%BC%89%E5%85%A5%E5%9C%96%E7%89%87%E8%88%87%E5%AF%AB%E5%AD%97">圖片</a></footer></center>
+</body>
+</html>
